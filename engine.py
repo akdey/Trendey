@@ -5,21 +5,29 @@ import asyncio
 import edge_tts
 from gradio_client import Client
 
+from huggingface_hub import InferenceClient
+
 class ScriptEngine:
     """Uses HF Inference API to generate topics and scripts."""
     def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv("HF_TOKEN")
-        self.api_url = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-72B-Instruct"
+        self.api_key = api_key or (os.getenv("HF_TOKEN") or "").strip()
+        # Use InferenceClient which handles the router/endpoint logic automatically
+        self.client = InferenceClient("Qwen/Qwen2.5-72B-Instruct", token=self.api_key)
 
     def query(self, prompt):
         if not self.api_key: return "Error: No HF_TOKEN"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        payload = {"inputs": f"<|system|>\nYou are a viral YouTube content strategist.\n<|user|>\n{prompt}\n<|assistant|>", "parameters": {"max_new_tokens": 1500}}
-        response = requests.post(self.api_url, headers=headers, json=payload)
         try:
-            res = response.json()
-            return res[0]['generated_text'].split("<|assistant|>")[-1].strip()
-        except: return str(response.json())
+            # Use the chat completion API which is the modern standard
+            response = ""
+            for message in self.client.chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1500,
+                stream=True
+            ):
+                response += (message.choices[0].delta.content or "")
+            return response.strip()
+        except Exception as e:
+            return f"Error from HF API: {str(e)}"
 
     def get_viral_topic(self):
         prompt = "Search trends for 2026. Give me ONE high-CPM, viral topic for a 60-second video. Just the topic name."
@@ -40,10 +48,28 @@ class ScriptEngine:
         }}
         """
         response = self.query(prompt)
-        # Basic JSON extraction in case model adds markers
-        if "```json" in response:
-            response = response.split("```json")[-1].split("```")[0].strip()
-        return json.loads(response)
+        print(f"DEBUG: LLM Response length: {len(response)}")
+        
+        # Robust extraction
+        try:
+            if "```json" in response:
+                response = response.split("```json")[-1].split("```")[0].strip()
+            # If the model didn't use blocks, try to find the first '{' and last '}'
+            elif "{" in response and "}" in response:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                response = response[start:end]
+            
+            return json.loads(response)
+        except Exception as e:
+            print(f"❌ JSON Parse Error: {e}\nResponse was: {response[:200]}...")
+            # Return a fallback script to prevent crash
+            return {
+                "title": f"The Future of {topic}",
+                "voiceover_text": f"Welcome! Today we talk about {topic}.",
+                "b_roll_prompts": [f"{topic} cinematic visual"],
+                "avatar_schedule": [{"time": 0, "position": "center", "action": "intro"}]
+            }
 
 class RemoteAssetEngine:
     """Triggering HF Spaces for Video and LipSync."""
