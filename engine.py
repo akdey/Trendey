@@ -49,8 +49,8 @@ class RemoteAssetEngine:
     """Triggering HF Spaces for Video and LipSync."""
     def __init__(self, video_space, lipsync_space, hf_token=None):
         self.hf_token = hf_token
-        self.video_client = Client(video_space, hf_token=self.hf_token) if video_space else None
-        self.lipsync_client = Client(lipsync_space, hf_token=self.hf_token) if lipsync_space else None
+        self.video_client = Client(video_space, token=self.hf_token) if video_space else None
+        self.lipsync_client = Client(lipsync_space, token=self.hf_token) if lipsync_space else None
 
     def generate_video_clip(self, prompt, output_path):
         """Calls Wan-2.1 or LTX Space."""
