@@ -12,9 +12,9 @@ class TrendeyOrchestrator:
         from dotenv import load_dotenv
         load_dotenv()
         
-        self.hf_token = os.getenv("HF_TOKEN") or None
-        self.video_space = os.getenv("VIDEO_BACKEND") or "Wan-AI/Wan2.1-T2V-14B"
-        self.lipsync_space = os.getenv("AVATAR_BACKEND") or "KwaiVGI/LivePortrait"
+        self.hf_token = (os.getenv("HF_TOKEN") or "").strip() or None
+        self.video_space = (os.getenv("VIDEO_BACKEND") or "").strip() or "Wan-AI/Wan2.1"
+        self.lipsync_space = (os.getenv("AVATAR_BACKEND") or "").strip() or "KwaiVGI/LivePortrait"
         self.avatar_ref = "assets/avatar_ref.jpg"
         
         # Hardcoded High-CPM Topics for 2026
