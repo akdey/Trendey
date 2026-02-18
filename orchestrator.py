@@ -13,7 +13,7 @@ class TrendeyOrchestrator:
         load_dotenv()
         
         self.hf_token = os.getenv("HF_TOKEN") or None
-        self.video_space = os.getenv("VIDEO_BACKEND") or "Wan-AI/Wan2.1"
+        self.video_space = os.getenv("VIDEO_BACKEND") or "Wan-AI/Wan2.1-T2V-14B"
         self.lipsync_space = os.getenv("AVATAR_BACKEND") or "KwaiVGI/LivePortrait"
         self.avatar_ref = "assets/avatar_ref.jpg"
         
