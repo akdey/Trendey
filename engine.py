@@ -53,17 +53,33 @@ class RemoteAssetEngine:
         self.lipsync_client = Client(lipsync_space, token=self.hf_token) if lipsync_space else None
 
     def generate_video_clip(self, prompt, output_path):
-        """Calls Wan-2.1 or LTX Space."""
+        """Calls Wan-2.1 Space with correct argument mapping."""
         print(f"🎬 Generating B-Roll: {prompt}")
-        result = self.video_client.predict(prompt=prompt, api_name="/generate")
-        # result is usually a path to the file
+        # Wan-2.1 T2V-14B Space: [prompt, neg_prompt, resolution, frames, steps, guidance, seed]
+        # Signature: (prompt, negative_prompt, resolution, num_frames, num_inference_steps, guidance_scale, seed)
+        result = self.video_client.predict(
+            prompt,               # prompt
+            "low quality, blurry", # negative_prompt
+            "832x480",            # resolution
+            81,                   # num_frames
+            50,                   # num_inference_steps (Wan uses 50 for high quality)
+            6.0,                  # guidance_scale
+            -1,                   # seed
+            api_name="/generate"
+        )
         os.replace(result, output_path)
         return output_path
 
     def generate_talking_avatar(self, image_path, audio_path, output_path):
-        """Calls LivePortrait / StableAvatar Space."""
+        """Calls LivePortrait / StableAvatar Space with correct mapping."""
         print(f"👤 Syncing Avatar {image_path} with Audio {audio_path}")
-        result = self.lipsync_client.predict(image_path, audio_path, api_name="/predict")
+        # LivePortrait: [input_image, input_audio, flag_do_lip_sync]
+        result = self.lipsync_client.predict(
+            image_path, 
+            audio_path, 
+            True,        # flag_do_lip_sync
+            api_name="/predict"
+        )
         os.replace(result, output_path)
         return output_path
 

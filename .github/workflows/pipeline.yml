@@ -30,8 +30,8 @@ jobs:
       - name: Run Orchestrator
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          VIDEO_BACKEND: ${{ secrets.VIDEO_BACKEND || 'Wan-AI/Wan2.1' }}
-          AVATAR_BACKEND: ${{ secrets.AVATAR_BACKEND || 'KwaiVGI/LivePortrait' }}
+          VIDEO_BACKEND: ${{ secrets.VIDEO_BACKEND }}
+          AVATAR_BACKEND: ${{ secrets.AVATAR_BACKEND }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # Future: YouTube API keys

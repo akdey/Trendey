@@ -13,8 +13,8 @@ class TrendeyOrchestrator:
         load_dotenv()
         
         self.hf_token = os.getenv("HF_TOKEN")
-        self.video_space = os.getenv("VIDEO_BACKEND", "Wan-AI/Wan2.1")
-        self.lipsync_space = os.getenv("AVATAR_BACKEND", "KwaiVGI/LivePortrait")
+        self.video_space = os.getenv("VIDEO_BACKEND") or "Wan-AI/Wan2.1"
+        self.lipsync_space = os.getenv("AVATAR_BACKEND") or "KwaiVGI/LivePortrait"
         self.avatar_ref = "assets/avatar_ref.jpg"
         
         # Hardcoded High-CPM Topics for 2026
@@ -32,17 +32,27 @@ class TrendeyOrchestrator:
         self.assembler = VideoAssembler()
 
     def run(self, manual_topic=None):
-        print("🚀 Starting Viral Video Pipeline...")
+        print("🚀 Starting Trendey Pipeline...")
         
         # Check for avatar image
         if not os.path.exists(self.avatar_ref):
             print(f"❌ Error: Avatar reference photo not found at {self.avatar_ref}")
-            print("Please save your photo to 'assets/avatar_ref.jpg' before running.")
             return None
 
         # Step 1: Topic Selection
-        topic = manual_topic or random.choice(self.default_topics)
-        print(f"📌 Chosen Topic: {topic}")
+        if manual_topic:
+            topic = manual_topic
+        else:
+            # Brainstorm and ask via Telegram
+            print("🧠 Brainstorming topics...")
+            topics = [self.script_engine.get_viral_topic() for _ in range(3)]
+            from telegram_bot import TelegramInterface
+            tg = TelegramInterface()
+            tg.send_topic_options(topics)
+            # For simplicity in GitHub Actions, if no topic is provided, choose the first one
+            topic = topics[0]
+            
+        print(f"📌 Producing: {topic}")
         
         # Step 2: Scripting
         script = self.script_engine.generate_full_script(topic)
