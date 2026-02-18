@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import asyncio
+import time
 import edge_tts
 from gradio_client import Client
 
@@ -74,71 +75,73 @@ class RemoteAssetEngine:
         self.hf_token = hf_token
         self.video_client = Client(video_space, token=self.hf_token) if video_space else None
         self.lipsync_client = Client(lipsync_space, token=self.hf_token) if lipsync_space else None
-
     def generate_video_clip(self, prompt, output_path):
-        """Calls Wan-2.1 Space with multiple fallback strategies."""
-        print(f"🎬 Generating B-Roll: {prompt}")
-        
-        # Possible API names for Wan-2.1
-        api_names = ["/generate", "/predict", "/t2v", "/t2v_generation"]
-        
-        args = [
-            prompt,               # prompt
-            "low quality, blurry", # negative_prompt
-            "832x480",            # resolution
-            81,                   # num_frames
-            50,                   # num_inference_steps
-            6.0,                  # guidance_scale
-            -1                    # seed
-        ]
+        """Asynchronous generation with status polling for Wan-2.1."""
+        print(f"🎬 Initializing Async Video Generation: {prompt}")
+        try:
+            # Step 1: Trigger the generation
+            # API: /t2v_generation_async (prompt, size, watermark, seed)
+            print("   🚀 Triggering /t2v_generation_async...")
+            trigger_result = self.video_client.predict(
+                prompt,         # prompt
+                "1280*720",     # size
+                True,           # watermark_wan
+                -1.0,           # seed
+                api_name="/t2v_generation_async"
+            )
+            print(f"   🕒 Job started. Estimated wait: {trigger_result[1]}s")
+            
+            # Step 2: Poll for status
+            max_retries = 40 # Up to 10 minutes
+            for i in range(max_retries):
+                time.sleep(15) 
+                print(f"   🔄 Polling status (Attempt {i+1})...")
+                
+                status = self.video_client.predict(api_name="/status_refresh")
+                video_info = status[0]
+                if video_info and isinstance(video_info, dict) and video_info.get("video"):
+                    video_file = video_info["video"]
+                    print(f"   ✅ Video generation complete: {video_file}")
+                    os.replace(video_file, output_path)
+                    return output_path
+                
+                progress = status[3] if len(status) > 3 else "Unknown"
+                print(f"   ⏳ Progress: {progress}%")
+                
+            raise Exception("Video generation timed out.")
+            
+        except Exception as e:
+            print(f"❌ Video Generation Failed: {str(e)}")
+            raise e
 
-        # Try API names first
-        for name in api_names:
+    def generate_talking_avatar(self, image_path, audio_path, output_path):
+        """Calls LivePortrait with fallback and robust return handling."""
+        print(f"👤 Syncing Avatar {image_path} with Audio {audio_path}")
+        # Args: [input_image, input_audio, flag_do_lip_sync]
+        args = [image_path, audio_path, True]
+        
+        for name in ["/predict", "/process"]:
             try:
-                print(f"   Trying api_name: {name}...")
-                result = self.video_client.predict(*args, api_name=name)
-                os.replace(result, output_path)
+                result = self.lipsync_client.predict(*args, api_name=name)
+                file_path = result
+                if isinstance(result, dict): file_path = result.get("video") or result.get("path")
+                elif isinstance(result, (list, tuple)): file_path = result[0]
+                os.replace(file_path, output_path)
                 return output_path
             except Exception:
                 continue
         
-        # Fallback to fn_index=0 if API names fail
         try:
-            print("   ⚠️ API names failed. Falling back to fn_index=0...")
-            result = self.video_client.predict(*args, fn_index=0)
-            os.replace(result, output_path)
+            print("   ⚠️ Avatar API names failed. Falling back to fn_index=0...")
+            result = self.lipsync_client.predict(*args, fn_index=0)
+            file_path = result
+            if isinstance(result, dict): file_path = result.get("video") or result.get("path")
+            elif isinstance(result, (list, tuple)): file_path = result[0]
+            os.replace(file_path, output_path)
             return output_path
         except Exception as e:
-            print(f"❌ Video Generation Failed: {str(e)}")
-            # Critically: print the API for the logs
-            try:
-                self.video_client.view_api()
-            except: pass
+            print(f"❌ Avatar Generation Failed: {str(e)}")
             raise e
-
-    def generate_talking_avatar(self, image_path, audio_path, output_path):
-        """Calls LivePortrait / StableAvatar Space with resilience."""
-        print(f"👤 Syncing Avatar {image_path} with Audio {audio_path}")
-        
-        args = [image_path, audio_path, True]
-        
-        try:
-            # Try official name
-            result = self.lipsync_client.predict(*args, api_name="/predict")
-            os.replace(result, output_path)
-            return output_path
-        except Exception:
-            try:
-                # Fallback to fn_index=0
-                result = self.lipsync_client.predict(*args, fn_index=0)
-                os.replace(result, output_path)
-                return output_path
-            except Exception as e:
-                print(f"❌ Avatar Generation Failed: {str(e)}")
-                try:
-                    self.lipsync_client.view_api()
-                except: pass
-                raise e
 
 class AudioEngine:
     """Local TTS using Edge-TTS (No GPU needed)."""
