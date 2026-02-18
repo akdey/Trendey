@@ -13,7 +13,7 @@ class TrendeyOrchestrator:
         load_dotenv()
         
         self.hf_token = os.getenv("HF_TOKEN")
-        self.video_space = os.getenv("VIDEO_BACKEND", "Wan-AI/Wan2.1-T2V-14B")
+        self.video_space = os.getenv("VIDEO_BACKEND", "Wan-AI/Wan2.1")
         self.lipsync_space = os.getenv("AVATAR_BACKEND", "KwaiVGI/LivePortrait")
         self.avatar_ref = "assets/avatar_ref.jpg"
         
@@ -27,7 +27,7 @@ class TrendeyOrchestrator:
         
         # Initialize Engines
         self.script_engine = ScriptEngine(self.hf_token)
-        self.asset_engine = RemoteAssetEngine(self.video_space, self.lipsync_space)
+        self.asset_engine = RemoteAssetEngine(self.video_space, self.lipsync_space, hf_token=self.hf_token)
         self.audio_engine = AudioEngine()
         self.assembler = VideoAssembler()
 
