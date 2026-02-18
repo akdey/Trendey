@@ -12,7 +12,7 @@ class TrendeyOrchestrator:
         from dotenv import load_dotenv
         load_dotenv()
         
-        self.hf_token = os.getenv("HF_TOKEN")
+        self.hf_token = os.getenv("HF_TOKEN") or None
         self.video_space = os.getenv("VIDEO_BACKEND") or "Wan-AI/Wan2.1"
         self.lipsync_space = os.getenv("AVATAR_BACKEND") or "KwaiVGI/LivePortrait"
         self.avatar_ref = "assets/avatar_ref.jpg"
@@ -34,6 +34,11 @@ class TrendeyOrchestrator:
     def run(self, manual_topic=None):
         print("🚀 Starting Trendey Pipeline...")
         
+        # Validation
+        if not self.hf_token:
+            print("❌ Error: HF_TOKEN is missing! Please add it to your environment or GitHub Secrets.")
+            return None
+            
         # Check for avatar image
         if not os.path.exists(self.avatar_ref):
             print(f"❌ Error: Avatar reference photo not found at {self.avatar_ref}")
