@@ -9,10 +9,11 @@ gradio_client
 huggingface_hub
 requests
 edge-tts
-moviepy
-opencv-python
+moviepy<2.0.0
+opencv-python-headless
 numpy
 Pillow
 sentencepiece
 ffmpeg-python
+pydub
 python-dotenv
