@@ -17,15 +17,12 @@ class ScriptEngine:
     def query(self, prompt):
         if not self.api_key: return "Error: No HF_TOKEN"
         try:
-            # Use the chat completion API which is the modern standard
-            response = ""
-            for message in self.client.chat_completion(
+            # Simplified non-streaming call for better stability
+            response = self.client.chat_completion(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500,
-                stream=True
-            ):
-                response += (message.choices[0].delta.content or "")
-            return response.strip()
+                max_tokens=1500
+            )
+            return response.choices[0].message.content.strip()
         except Exception as e:
             return f"Error from HF API: {str(e)}"
 
@@ -88,10 +85,9 @@ class RemoteAssetEngine:
             "low quality, blurry", # negative_prompt
             "832x480",            # resolution
             81,                   # num_frames
-            50,                   # num_inference_steps (Wan uses 50 for high quality)
+            50,                   # num_inference_steps
             6.0,                  # guidance_scale
-            -1,                   # seed
-            api_name="/generate"
+            -1                    # seed (Remove api_name to let Gradio infer)
         )
         os.replace(result, output_path)
         return output_path

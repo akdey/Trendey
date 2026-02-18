@@ -44,18 +44,19 @@ class TrendeyOrchestrator:
             print(f"❌ Error: Avatar reference photo not found at {self.avatar_ref}")
             return None
 
-        # Step 1: Topic Selection
-        if manual_topic:
-            topic = manual_topic
-        else:
-            # Brainstorm and ask via Telegram
-            print("🧠 Brainstorming topics...")
-            topics = [self.script_engine.get_viral_topic() for _ in range(3)]
-            from telegram_bot import TelegramInterface
-            tg = TelegramInterface()
-            tg.send_topic_options(topics)
-            # For simplicity in GitHub Actions, if no topic is provided, choose the first one
-            topic = topics[0]
+        # Step 1: Topic Selection (Hardcoded as requested)
+        topic = "India AI Summit 2026"
+        # if manual_topic:
+        #     topic = manual_topic
+        # else:
+        #     # Brainstorm and ask via Telegram
+        #     print("🧠 Brainstorming topics...")
+        #     topics = [self.script_engine.get_viral_topic() for _ in range(3)]
+        #     from telegram_bot import TelegramInterface
+        #     tg = TelegramInterface()
+        #     tg.send_topic_options(topics)
+        #     # For simplicity in GitHub Actions, if no topic is provided, choose the first one
+        #     topic = topics[0]
             
         print(f"📌 Producing: {topic}")
         
