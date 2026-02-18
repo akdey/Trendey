@@ -1,0 +1,45 @@
+name: VideoGen Automated Pipeline
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Once a day at midnight
+  workflow_dispatch: # Manual trigger
+    inputs:
+      topic:
+        description: 'Manual Topic (Optional)'
+        required: false
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          # FFmpeg is required for moviepy
+          sudo apt-get install -y ffmpeg
+
+      - name: Run Orchestrator
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          VIDEO_SPACE: ${{ secrets.VIDEO_SPACE }}
+          LIPSYNC_SPACE: ${{ secrets.LIPSYNC_SPACE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Future: YouTube API keys
+        run: |
+          python orchestrator.py ${{ github.event.inputs.topic }}
+
+      - name: Upload Final Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-video
+          path: exports/*.mp4

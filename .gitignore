@@ -1,0 +1,9 @@
+.env
+temp/
+exports/
+__pycache__/
+*.mp4
+*.mp3
+.agent/
+assets/avatar_ref_original.jpg
+.PROJECT_MEMORY.bak
