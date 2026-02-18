@@ -76,34 +76,69 @@ class RemoteAssetEngine:
         self.lipsync_client = Client(lipsync_space, token=self.hf_token) if lipsync_space else None
 
     def generate_video_clip(self, prompt, output_path):
-        """Calls Wan-2.1 Space with correct argument mapping."""
+        """Calls Wan-2.1 Space with multiple fallback strategies."""
         print(f"🎬 Generating B-Roll: {prompt}")
-        # Wan-2.1 T2V-14B Space: [prompt, neg_prompt, resolution, frames, steps, guidance, seed]
-        # Signature: (prompt, negative_prompt, resolution, num_frames, num_inference_steps, guidance_scale, seed)
-        result = self.video_client.predict(
+        
+        # Possible API names for Wan-2.1
+        api_names = ["/generate", "/predict", "/t2v", "/t2v_generation"]
+        
+        args = [
             prompt,               # prompt
             "low quality, blurry", # negative_prompt
             "832x480",            # resolution
             81,                   # num_frames
             50,                   # num_inference_steps
             6.0,                  # guidance_scale
-            -1                    # seed (Remove api_name to let Gradio infer)
-        )
-        os.replace(result, output_path)
-        return output_path
+            -1                    # seed
+        ]
+
+        # Try API names first
+        for name in api_names:
+            try:
+                print(f"   Trying api_name: {name}...")
+                result = self.video_client.predict(*args, api_name=name)
+                os.replace(result, output_path)
+                return output_path
+            except Exception:
+                continue
+        
+        # Fallback to fn_index=0 if API names fail
+        try:
+            print("   ⚠️ API names failed. Falling back to fn_index=0...")
+            result = self.video_client.predict(*args, fn_index=0)
+            os.replace(result, output_path)
+            return output_path
+        except Exception as e:
+            print(f"❌ Video Generation Failed: {str(e)}")
+            # Critically: print the API for the logs
+            try:
+                self.video_client.view_api()
+            except: pass
+            raise e
 
     def generate_talking_avatar(self, image_path, audio_path, output_path):
-        """Calls LivePortrait / StableAvatar Space with correct mapping."""
+        """Calls LivePortrait / StableAvatar Space with resilience."""
         print(f"👤 Syncing Avatar {image_path} with Audio {audio_path}")
-        # LivePortrait: [input_image, input_audio, flag_do_lip_sync]
-        result = self.lipsync_client.predict(
-            image_path, 
-            audio_path, 
-            True,        # flag_do_lip_sync
-            api_name="/predict"
-        )
-        os.replace(result, output_path)
-        return output_path
+        
+        args = [image_path, audio_path, True]
+        
+        try:
+            # Try official name
+            result = self.lipsync_client.predict(*args, api_name="/predict")
+            os.replace(result, output_path)
+            return output_path
+        except Exception:
+            try:
+                # Fallback to fn_index=0
+                result = self.lipsync_client.predict(*args, fn_index=0)
+                os.replace(result, output_path)
+                return output_path
+            except Exception as e:
+                print(f"❌ Avatar Generation Failed: {str(e)}")
+                try:
+                    self.lipsync_client.view_api()
+                except: pass
+                raise e
 
 class AudioEngine:
     """Local TTS using Edge-TTS (No GPU needed)."""
