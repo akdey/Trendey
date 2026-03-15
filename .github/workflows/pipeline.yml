@@ -2,7 +2,7 @@ name: VideoGen Automated Pipeline
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Once a day at midnight
+    #- cron: '0 0 * * *' # Once a day at midnight
   workflow_dispatch: # Manual trigger
     inputs:
       topic:
